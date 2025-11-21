@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Try to display your name</title>
+  <style>
+    :root{
+      --bg-light:#f4f6fb;
+      --card-light:#ffffff;
+      --text-light:#111;
+      --muted-light:#556;
+      --bg-dark:#0f1724;
+      --card-dark:#0b1220;
+      --text-dark:#ffffff;
+      --muted-dark:#e0e0e0;
+      --accent:#e11d48; /* red */
+      --green-exit:#16a34a; /* green for exit */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--text-light);background:var(--bg-light);transition:background .25s,color .25s}
+    .dark{background:var(--bg-dark);color:var(--text-dark)}
+
+    /* top bar */
+    #topbar{position:fixed;left:0;right:0;top:0;height:48px;display:flex;align-items:center;justify-content:flex-end;padding:0 1rem;background:transparent;z-index:50}
+    #exitBtn{background:var(--green-exit);color:#fff;border:0;padding:.45rem .8rem;border-radius:8px;margin-left:.6rem;cursor:pointer}
+
+    .container{max-width:900px;margin:4.5rem auto;padding:1.5rem}
+    .card{background:var(--card-light);padding:1.5rem;border-radius:14px;box-shadow:0 6px 20px rgba(10,20,40,.08);transition:background .25s,box-shadow .25s}
+    .dark .card{background:var(--card-dark);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+
+    h1{font-size:1.6rem;margin:0 0 .5rem}
+    p.lead{margin:0 0 1rem;color:var(--muted-light)}
+    .dark p.lead{color:var(--muted-dark)}
+
+    .center{display:flex;align-items:center;justify-content:center}
+    .btn{padding:.7rem 1.1rem;border-radius:9px;border:0;font-weight:600;cursor:pointer}
+    .btn-red{background:var(--accent);color:#fff}
+
+    /* two views: intro and input view */
+    #introView,#inputView{min-height:320px}
+    #inputView{display:none}
+
+    /* info chart */
+    .chart{margin-bottom:1rem;overflow:auto}
+    table{border-collapse:collapse;width:100%;min-width:560px}
+    td,th{padding:.45rem .6rem;border:1px solid rgba(0,0,0,.06);text-align:center;font-size:.9rem}
+    .dark td,.dark th{border-color:rgba(255,255,255,.06); color:var(--text-dark)}
+    th{background:rgba(0,0,0,.03);font-weight:700}
+    .dark th{background:rgba(255,255,255,.02)}
+
+    /* input area */
+    .search-row{display:flex;gap:.8rem;align-items:center}
+    .fake-input{flex:1;padding:.9rem 1rem;border-radius:10px;border:1px solid rgba(0,0,0,.08);font-size:1.05rem;min-height:44px;display:flex;align-items:center;color:var(--text-light);background:transparent}
+    .dark .fake-input{border-color:rgba(255,255,255,.06);color:var(--text-dark);background:transparent}
+
+    .meta{margin-top:.6rem;font-size:.9rem;color:var(--muted-light)}
+    .dark .meta{color:var(--muted-dark)}
+
+    .flash{animation:flash .2s ease}
+    @keyframes flash{0%{filter:brightness(1.3)}50%{filter:brightness(.9)}100%{filter:brightness(1)}}
+
+    .result{margin-top:1.2rem;padding:1rem;border-radius:8px;background:rgba(0,0,0,.02)}
+    .dark .result{background:rgba(255,255,255,.02)}
+
+    /* full screen result page */
+    #resultPage{display:none;position:fixed;inset:0;align-items:center;justify-content:center;flex-direction:column;z-index:40}
+    #resultInner{max-width:900px;margin:auto;padding:2rem;text-align:center}
+    #finalName{font-size:2.2rem;font-weight:800}
+    #finalMessage{margin-top:1rem;font-size:1rem;color:var(--muted-light);display:block;}
+
+    /* language modal */
+    #langModal{display:none;position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;z-index:60}
+    #langCard{background:var(--card-light);padding:1.2rem;border-radius:12px;min-width:280px;max-width:90%;text-align:center;color:var(--text-light)}
+    .dark #langCard{background:var(--card-dark);color:var(--text-dark)}
+    .langOption{display:block;padding:.6rem .8rem;margin:.4rem 0;border-radius:8px;border:1px solid rgba(0,0,0,.06);cursor:pointer}
+    .dark .langOption{border-color:rgba(255,255,255,.06)}
+
+    footer{margin-top:2rem;text-align:center;color:var(--muted-light);font-size:.85rem}
+
+    /* responsive */
+    @media (max-width:600px){.container{margin:2rem .6rem}#finalName{font-size:1.6rem}}
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <button id="exitBtn">Exit</button>
+  </div>
+
+  <div class="container">
+    <div id="introView" class="card center" role="main">
+      <div style="text-align:center;max-width:640px">
+        <h1>Try to display your name</h1>
+        <p class="lead">Click the red button below to try. Follow the instructions on the next screen.</p>
+        <button id="startBtn" class="btn btn-red">I will try</button>
+      </div>
+    </div>
+
+    <div id="inputView" class="card" aria-hidden="true">
+      <h1>Enter your name using numbers</h1>
+      <p class="lead">All letters are arranged in increasing numerical order starting from 1 to 52. <strong>Small letter a = 1, Capital A = 2, small b = 3, Capital B = 4</strong>, and so on up to 52. Enter the number for each letter, press <em>space</em> to fix that letter and move to the next. After each letter is fixed you will be asked to choose a language.</p>
+
+      <div class="chart" aria-hidden="false">
+        <table id="mapTable" role="table">
+          <thead><tr><th>#</th><th>Letter</th><th>#</th><th>Letter</th><th>#</th><th>Letter</th><th>#</th><th>Letter</th></tr></thead>
+          <tbody id="mapBody"></tbody>
+        </table>
+      </div>
+
+      <div>
+        <div class="search-row">
+          <div id="visibleInput" class="fake-input" tabindex="0" role="textbox" aria-label="Number input"> </div>
+          <button id="submitBtn" class="btn btn-red" style="background:var(--accent);">Submit</button>
+        </div>
+        <div class="meta">Type digits. Press <strong>space</strong> to fix a letter (space will not be shown). Only numbers are shown in the input. Backspace removes digits you typed for the current letter.</div>
+
+        <div id="resultBox" class="result" style="display:none"></div>
+      </div>
+    </div>
+
+    <footer>Made for: Try to display your name — Numeric input demo</footer>
+  </div>
+
+  <!-- language modal -->
+  <div id="langModal">
+    <div id="langCard">
+      <h3>Choose your language</h3>
+      <div id="langOptions">
+        <button class="langOption">English</button>
+        <button class="langOption">Spanish</button>
+        <button class="langOption">French</button>
+        <button class="langOption">Hindi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen result page (shown after Submit) -->
+  <div id="resultPage">
+    <div id="resultInner">
+      <div id="finalName">&nbsp;</div>
+      <div id="finalMessage">&nbsp;</div>
+      <div style="margin-top:1.2rem">
+        <button id="restartBtn" class="btn">Try again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- utilities ---
+    const startBtn = document.getElementById('startBtn');
+    const introView = document.getElementById('introView');
+    const inputView = document.getElementById('inputView');
+    const visibleInput = document.getElementById('visibleInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const resultBox = document.getElementById('resultBox');
+    const resultPage = document.getElementById('resultPage');
+    const finalName = document.getElementById('finalName');
+    const finalMessage = document.getElementById('finalMessage');
+    const restartBtn = document.getElementById('restartBtn');
+    const exitBtn = document.getElementById('exitBtn');
+
+    const langModal = document.getElementById('langModal');
+    const langCard = document.getElementById('langCard');
+    const langOptions = document.getElementById('langOptions');
+
+    // build mapping 1..52 -> letters
+    const map = [];
+    for(let n=1;n<=52;n++){
+      const idx = Math.ceil(n/2)-1; // 0-based index for letter a..z
+      const base = String.fromCharCode(97 + idx);
+      const letter = (n%2===1)? base : base.toUpperCase();
+      map.push({n,letter});
+    }
+
+    // render table with 4 columns of pairs to keep it compact
+    (function renderMapTable(){
+      const rows = Math.ceil(map.length/4);
+      const tbody = document.getElementById('mapBody');
+      for(let r=0;r<rows;r++){
+        const tr = document.createElement('tr');
+        for(let c=0;c<4;c++){
+          const i = r + c*rows;
+          if(i < map.length){
+            const tdN = document.createElement('td'); tdN.textContent = map[i].n;
+            const tdL = document.createElement('td'); tdL.textContent = map[i].letter;
+            tr.appendChild(tdN); tr.appendChild(tdL);
+          } else {
+            tr.appendChild(document.createElement('td')); tr.appendChild(document.createElement('td'));
+          }
+        }
+        tbody.appendChild(tr);
+      }
+    })();
+
+    // state
+    let currentDigits = ''; // digits typed for the current letter (visible in the fake input)
+    const fixedLetters = []; // letters fixed in order
+    let themeDark = false; // toggle theme
+
+    function updateVisible(){
+      visibleInput.textContent = currentDigits || '\u00A0';
+    }
+
+    // Use a hidden real input to capture typing reliably (prevents weird multi-digit artefacts)
+    let hiddenInput = document.createElement('input');
+    hiddenInput.type = 'text';
+    hiddenInput.inputMode = 'numeric';
+    hiddenInput.autocomplete = 'off';
+    hiddenInput.style.position = 'fixed';
+    hiddenInput.style.left = '-9999px';
+    hiddenInput.maxLength = 2; // only need up to 2 digits (52 max)
+    document.body.appendChild(hiddenInput);
+
+    // focus handling
+    visibleInput.addEventListener('click', ()=> hiddenInput.focus());
+    visibleInput.addEventListener('focus', ()=> hiddenInput.focus());
+
+    hiddenInput.addEventListener('input', ()=>{
+      // sanitize digits only and keep at most 2 chars
+      const d = hiddenInput.value.replace(/\D/g, '').slice(0,2);
+      hiddenInput.value = d;
+      currentDigits = d;
+      updateVisible();
+    });
+
+    hiddenInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Backspace'){
+        // allow default then sync
+        setTimeout(()=>{ currentDigits = hiddenInput.value.replace(/\D/g,'').slice(0,2); updateVisible(); },0);
+        return;
+      }
+      if(e.key === ' ' || e.code === 'Space' || e.key === 'Enter'){
+        e.preventDefault();
+        finalizeCurrent();
+        if(e.key === 'Enter') submitName();
+      }
+      // digits are handled by input event
+    });
+
+    // finalize current digits into a letter
+    function finalizeCurrent(){
+      if(!currentDigits) return; // nothing to fix
+      const n = parseInt(currentDigits,10);
+      if(Number.isNaN(n) || n < 1 || n > 52){
+        // invalid number: briefly flash
+        visibleInput.classList.add('flash');
+        setTimeout(()=> visibleInput.classList.remove('flash'),200);
+        currentDigits = '';
+        hiddenInput.value = '';
+        updateVisible();
+        return;
+      }
+      // map n to letter
+      const idx = Math.ceil(n/2)-1;
+      const base = String.fromCharCode(97 + idx);
+      const letter = (n%2===1)? base : base.toUpperCase();
+      fixedLetters.push(letter);
+
+      // clear current (but wait for language choice before flicker)
+      currentDigits = '';
+      hiddenInput.value = '';
+      updateVisible();
+
+      // show language modal; theme will flicker after language selection and modal should be opposite theme
+      showLanguageModal();
+    }
+
+    function showLanguageModal(){
+      // set modal theme to opposite of current page theme
+      const pageIsDark = document.documentElement.classList.contains('dark');
+      if(pageIsDark){
+        // page is dark -> modal should be light
+        langCard.style.background = getComputedStyle(document.documentElement).getPropertyValue('--card-light') || '#fff';
+        langCard.style.color = getComputedStyle(document.documentElement).getPropertyValue('--text-light') || '#111';
+      } else {
+        // page is light -> modal should be dark
+        langCard.style.background = getComputedStyle(document.documentElement).getPropertyValue('--card-dark') || '#0b1220';
+        langCard.style.color = getComputedStyle(document.documentElement).getPropertyValue('--text-dark') || '#fff';
+      }
+
+      langModal.style.display = 'flex';
+      // attach one-time handlers to options
+      const opts = Array.from(langOptions.querySelectorAll('.langOption'));
+      opts.forEach(opt => {
+        const handler = () => {
+          // you could store chosen language per-letter here using opt.textContent
+          langModal.style.display = 'none';
+          opts.forEach(o=>o.removeEventListener('click', handler));
+
+          // after language chosen, flicker theme
+          themeDark = !themeDark;
+          if(themeDark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+          inputView.classList.add('flash');
+          setTimeout(()=> inputView.classList.remove('flash'),220);
+        };
+        opt.addEventListener('click', handler);
+      });
+    }
+
+    // submit: navigate to the centered result page and show reversed name
+    function submitName(){
+      if(currentDigits) finalizeCurrent();
+      if(fixedLetters.length === 0){
+        resultBox.style.display = 'block';
+        resultBox.textContent = 'No letters entered yet.';
+        return;
+      }
+      const reversed = fixedLetters.slice().reverse().join('');
+
+      // set final name text
+      finalName.textContent = reversed;
+      // set the added message per your request
+      finalMessage.textContent = "did everything right, yet the name is displayed reverse, its the worst ui/ux, ain't it ?";
+
+      // style result page according to theme
+      if(document.documentElement.classList.contains('dark')){
+        resultPage.style.background = 'var(--bg-dark)';
+        finalName.style.color = 'var(--text-dark)';
+        finalMessage.style.color = 'var(--muted-dark)';
+      } else {
+        resultPage.style.background = 'var(--bg-light)';
+        finalName.style.color = 'var(--text-light)';
+        finalMessage.style.color = 'var(--muted-light)';
+      }
+
+      // show result page and hide main container
+      document.querySelector('.container').style.display = 'none';
+      resultPage.style.display = 'flex';
+      window.scrollTo(0,0);
+    }
+
+    function escapeHtml(s){
+      return s.replace(/[&<>\"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[c]; });
+    }
+
+    // wire start button — single page: hide intro, show input
+    startBtn.addEventListener('click', ()=>{
+      introView.style.display = 'none';
+      inputView.style.display = 'block';
+      inputView.setAttribute('aria-hidden','false');
+      hiddenInput.focus();
+    });
+
+    // wire submit button
+    submitBtn.addEventListener('click', submitName);
+
+    // restart button on result page — go back to input view and reset state
+    restartBtn.addEventListener('click', ()=>{
+      document.querySelector('.container').style.display = 'block';
+      resultPage.style.display = 'none';
+
+      // reset state for a new attempt
+      currentDigits = '';
+      fixedLetters.length = 0;
+      hiddenInput.value = '';
+      updateVisible();
+
+      // reset theme to light
+      document.documentElement.classList.remove('dark');
+      themeDark = false;
+      resultBox.style.display = 'none';
+      finalMessage.textContent = '';
+    });
+
+    // exit button — return to intro and reset everything
+    exitBtn.addEventListener('click', ()=>{
+      // hide input and result, show intro
+      document.querySelector('.container').style.display = 'block';
+      introView.style.display = 'block';
+      inputView.style.display = 'none';
+      resultPage.style.display = 'none';
+
+      // reset state
+      currentDigits = '';
+      fixedLetters.length = 0;
+      hiddenInput.value = '';
+      updateVisible();
+      document.documentElement.classList.remove('dark');
+      themeDark = false;
+      resultBox.style.display = 'none';
+      finalMessage.textContent = '';
+    });
+
+    // accessibility: allow typing into the page with numbers without clicking input first
+    window.addEventListener('keydown', (e) => {
+      if (inputView.style.display === 'block' && document.activeElement !== hiddenInput) {
+        if ((e.key >= '0' && e.key <= '9') || e.key === 'Backspace' || e.key === ' ' || e.key === 'Enter') {
+          hiddenInput.focus();
+        }
+      }
+    });
+
+    // initial render
+    updateVisible();
+  </script>
+</body>
+</html>
